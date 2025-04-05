@@ -1,29 +1,26 @@
 'use client'
 
 import { motion } from 'framer-motion';
-import { useTryOn } from './TryOnContext';
+import { useTryOn } from './try-on-context';
+import {ACCENT_COLOR} from "@/app/components/modal/modal";
 
-interface ResultStepProps {
-    accentColor?: string;
-}
-
-export default function ResultStep({ accentColor = 'rgba(99, 102, 241, 1)' }: ResultStepProps) {
-    const { resultImage, goToStep, saveImage, shareImage, isDarkMode } = useTryOn();
+export default function ResultStep() {
+    const { resultImage, goToStep, saveImage, shareImage } = useTryOn();
 
     return (
         <div className="p-8 space-y-6">
             <div className="flex flex-col items-center space-y-6">
                 {resultImage ? (
                     <div className="relative w-full overflow-hidden rounded-xl">
-                        <motion.img 
-                            src={resultImage} 
-                            alt="Virtual try-on result" 
+                        <motion.img
+                            src={resultImage}
+                            alt="Virtual try-on result"
                             className="w-full object-contain max-h-80"
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ duration: 0.5 }}
                         />
-                        <motion.div 
+                        <motion.div
                             className="absolute top-3 right-3 bg-white/90 dark:bg-gray-900/90 px-3 py-1 rounded-full flex items-center space-x-1 shadow-lg"
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -38,7 +35,7 @@ export default function ResultStep({ accentColor = 'rgba(99, 102, 241, 1)' }: Re
                         <p className="text-gray-500 dark:text-gray-400">Result image not available</p>
                     </div>
                 )}
-                
+
                 <motion.div
                     className="text-center"
                     initial={{ opacity: 0, y: 10 }}
@@ -48,18 +45,14 @@ export default function ResultStep({ accentColor = 'rgba(99, 102, 241, 1)' }: Re
                     <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-white">
                         Your Virtual Look is Ready!
                     </h3>
-                    <p className={`text-sm mb-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    <p className={`text-sm mb-6 text-gray-300`}>
                         Here's how this outfit would look on you. Save the image or try with another photo.
                     </p>
-                    
+
                     <div className="flex flex-wrap justify-center gap-3">
                         <motion.button
                             onClick={() => goToStep('upload')}
-                            className={`px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                                isDarkMode 
-                                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' 
-                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                            }`}
+                            className={`px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 bg-gray-800 text-gray-300 hover:bg-gray-700`}
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
                         >
@@ -68,14 +61,10 @@ export default function ResultStep({ accentColor = 'rgba(99, 102, 241, 1)' }: Re
                             </svg>
                             Try Another Photo
                         </motion.button>
-                        
+
                         <motion.button
                             onClick={saveImage}
-                            className={`px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                                isDarkMode 
-                                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' 
-                                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                            }`}
+                            className={`px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 bg-gray-800 text-gray-300 hover:bg-gray-700`}
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
                         >
@@ -84,23 +73,23 @@ export default function ResultStep({ accentColor = 'rgba(99, 102, 241, 1)' }: Re
                             </svg>
                             Download
                         </motion.button>
-                        
+
                         <motion.button
                             onClick={shareImage}
                             className="px-5 py-2.5 rounded-lg text-sm font-medium text-white flex items-center gap-2 relative overflow-hidden"
-                            style={{ 
-                                background: `linear-gradient(135deg, ${accentColor}, ${accentColor}cc)`,
+                            style={{
+                                background: `linear-gradient(135deg, ${ACCENT_COLOR}, ${ACCENT_COLOR}cc)`,
                             }}
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
                         >
-                            <motion.span 
+                            <motion.span
                                 className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0 skew-x-12"
                                 initial={{ left: '-100%' }}
                                 animate={{ left: '100%' }}
-                                transition={{ 
-                                    repeat: Infinity, 
-                                    repeatType: "mirror", 
+                                transition={{
+                                    repeat: Infinity,
+                                    repeatType: "mirror",
                                     duration: 2,
                                     ease: "easeInOut"
                                 }}

@@ -13,7 +13,6 @@ interface TryOnContextType {
     isProcessing: boolean;
     progressValue: number;
     error: string | null;
-    isDarkMode: boolean;
     goToStep: (step: TryOnStep) => void;
     handleImageUpload: (file: File) => void;
     processImages: () => Promise<void>;
@@ -34,11 +33,10 @@ export const useTryOn = () => {
 
 interface TryOnProviderProps {
     children: ReactNode;
-    accentColor?: string;
     productImage: string;
 }
 
-export const TryOnProvider = ({ children, accentColor = 'rgba(99, 102, 241, 1)', productImage }: TryOnProviderProps) => {
+export const TryOnProvider = ({ children, productImage }: TryOnProviderProps) => {
     const [currentStep, setCurrentStep] = useState<TryOnStep>('preview');
     const [direction, setDirection] = useState<number>(0);
     const [userImage, setUserImage] = useState<string | null>(null);
@@ -46,22 +44,6 @@ export const TryOnProvider = ({ children, accentColor = 'rgba(99, 102, 241, 1)',
     const [isProcessing, setIsProcessing] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [progressValue, setProgressValue] = useState<number>(0);
-    const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
-
-    // Check system preference for dark mode
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-            setIsDarkMode(darkModeQuery.matches);
-
-            const darkModeListener = (e: MediaQueryListEvent) => {
-                setIsDarkMode(e.matches);
-            };
-
-            darkModeQuery.addEventListener('change', darkModeListener);
-            return () => darkModeQuery.removeEventListener('change', darkModeListener);
-        }
-    }, []);
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -162,7 +144,6 @@ export const TryOnProvider = ({ children, accentColor = 'rgba(99, 102, 241, 1)',
         isProcessing,
         progressValue,
         error,
-        isDarkMode,
         goToStep,
         handleImageUpload: (file: File) => handleImageUpload(file),
         processImages,

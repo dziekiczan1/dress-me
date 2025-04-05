@@ -3,13 +3,12 @@ import { motion } from 'framer-motion';
 
 interface ModalContentProps {
     children: ReactNode;
-    isDarkMode?: boolean;
 }
 
-export default function ModalContent({ children, isDarkMode = false }: ModalContentProps) {
+export default function ModalContent({ children }: ModalContentProps) {
     return (
         <motion.div
-            className={`p-8 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
+            className={`p-8 text-gray-300`}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}

@@ -26,7 +26,7 @@
 
     function createIframe() {
         const params = {
-            param1: window.MY_EMBED_PARAM1 || '',
+            imageContainer: window.IMAGE_CONTAINER || '',
         };
 
         const iframe = document.createElement('iframe');

@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion';
-import { useTryOn } from './TryOnContext';
+import { useTryOn } from '../../try-on/try-on-context';
 
 interface ModalHeadingProps {
     title: string;
@@ -12,9 +12,9 @@ interface ModalHeadingProps {
 export default function ModalHeading({
     title,
     onClose,
-    accentColor = 'rgba(99, 102, 241, 1)'
+    accentColor
 }: ModalHeadingProps) {
-    const { isDarkMode, currentStep } = useTryOn();
+    const { currentStep } = useTryOn();
 
     const StepIndicator = () => {
         const steps = ['preview', 'upload', 'result'];
@@ -46,7 +46,7 @@ export default function ModalHeading({
 
     return (
         <motion.div
-            className={`px-8 py-6 flex justify-between items-center ${isDarkMode ? 'border-b border-white/10' : 'border-b border-black/5'}`}
+            className={`px-8 py-6 flex justify-between items-center border-b border-white/10`}
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
@@ -55,7 +55,7 @@ export default function ModalHeading({
                 <motion.h2
                     className="text-xl font-medium"
                     style={{
-                        backgroundImage: `linear-gradient(90deg, ${accentColor === 'rgba(255,255,255,1)' ? '#6366f1' : accentColor}, ${accentColor === 'rgba(255,255,255,1)' ? '#6366f188' : accentColor + '88'})`,
+                        backgroundImage: `linear-gradient(90deg, ${accentColor}, ${accentColor + '88'})`,
                     }}
                 >
                     {title}
@@ -65,7 +65,7 @@ export default function ModalHeading({
 
             <motion.button
                 onClick={onClose}
-                className={`p-2 rounded-full transition-all hover:bg-black/5 ${isDarkMode ? 'text-white/80 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-700'}`}
+                className={`p-2 rounded-full transition-all hover:bg-black/5 text-white/80 hover:text-white hover:bg-white/10 cursor-pointer`}
                 aria-label="Close modal"
                 whileHover={{scale: 1.05}}
                 whileTap={{scale: 0.95}}
