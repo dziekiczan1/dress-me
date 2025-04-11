@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import {optimizeImage} from "@/app/utils/image-utils";
 
 type TryOnStep = 'preview' | 'upload' | 'processing' | 'result';
 
@@ -44,22 +45,85 @@ export const TryOnProvider = ({ children, productImage }: TryOnProviderProps) =>
     const [isProcessing, setIsProcessing] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [progressValue, setProgressValue] = useState<number>(0);
+    const [taskId, setTaskId] = useState<string | null>(null);
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
-        if (isProcessing) {
-            interval = setInterval(() => {
+        let progressInterval: NodeJS.Timeout;
+
+        if (isProcessing && taskId) {
+            setProgressValue(10);
+
+            progressInterval = setInterval(() => {
                 setProgressValue(prev => {
-                    const increment = prev < 30 ? 5 : prev < 60 ? 3 : prev < 80 ? 1.5 : 0.5;
+                    const increment =
+                        prev < 10 ? 2.0 :
+                            prev < 20 ? 1.5 :
+                                prev < 40 ? 1.0 :
+                                    prev < 70 ? 0.5 :
+                                        0.2;
+
                     const newValue = prev + increment;
-                    return newValue > 90 ? 90 : newValue;
+                    return newValue > 95 ? 95 : newValue;
                 });
-            }, 150);
-        } else if (currentStep === 'result') {
-            setProgressValue(100);
+            }, 200);
+
+            interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/tryon/status?taskId=${taskId}`);
+                    const status = await response.json();
+
+                    console.log('Status response:', status);
+
+                    if (status.data?.task_status === 'succeed') {
+                        console.log('Task succeeded. Task result:', status.data.task_result);
+
+                        const imageObject = status.data.task_result.images[0];
+
+                        if (imageObject && typeof imageObject === 'object' && imageObject.url) {
+                            setResultImage(imageObject.url);
+                            console.log('Setting result image URL:', imageObject.url);
+                        } else {
+                            console.error('Unexpected image result format:', imageObject);
+                            setError('Failed to get the result image URL');
+                        }
+
+                        clearInterval(progressInterval);
+                        setProgressValue(100);
+                        setIsProcessing(false);
+                        goToStep('result');
+                        clearInterval(interval);
+                    }
+
+                    else if (status.data?.task_status === 'failed') {
+                        clearInterval(progressInterval);
+                        setError(`Processing failed: ${status.data.task_status_msg}`);
+                        setIsProcessing(false);
+                        goToStep('upload');
+                        clearInterval(interval);
+                    }
+
+                    else if (status.data?.task_status === 'processing') {
+                        if (status.data.progress) {
+                            setProgressValue(Math.min(90, status.data.progress));
+                        }
+                    }
+                } catch (err: any) {
+                    clearInterval(progressInterval);
+                    console.error('Error checking status:', err);
+                    setError(`Failed to check status: ${err.message}`);
+                    setIsProcessing(false);
+                    goToStep('upload');
+                    clearInterval(interval);
+                }
+            }, 5000);
         }
-        return () => clearInterval(interval);
-    }, [isProcessing, currentStep]);
+
+        return () => {
+            if (interval) clearInterval(interval);
+            if (progressInterval) clearInterval(progressInterval);
+        };
+    }, [isProcessing, taskId]);
 
     const goToStep = (step: TryOnStep) => {
         setDirection(
@@ -69,12 +133,79 @@ export const TryOnProvider = ({ children, productImage }: TryOnProviderProps) =>
         setCurrentStep(step);
     };
 
-    const handleImageUpload = (file: File) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            setUserImage(e.target?.result as string);
-        };
-        reader.readAsDataURL(file);
+    const handleImageUpload = async (file: File) => {
+        try {
+            setError(null);
+
+            const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+            if (!validTypes.includes(file.type)) {
+                setError('Please upload a valid image file (JPG, JPEG, PNG, or GIF)');
+                return;
+            }
+
+            const maxSize = 5 * 1024 * 1024;
+            if (file.size > maxSize) {
+                setError('Image size should be less than 5MB');
+                return;
+            }
+
+            const optimizedImage = await optimizeImage(file);
+            setUserImage(optimizedImage);
+        } catch (err: any) {
+            console.error('Error handling image upload:', err);
+            setError(`Failed to process the uploaded image: ${err.message}`);
+        }
+    };
+
+    const getBase64FromUrl = async (url: string): Promise<string> => {
+        let parentOrigin = '';
+
+        if (window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
+            parentOrigin = window.location.ancestorOrigins[0];
+        }
+
+        let imageUrl = url;
+        if (url.includes('/_next/image')) {
+            const urlObj = new URL(url);
+            const originalUrl = urlObj.searchParams.get('url');
+            if (originalUrl) {
+                if (originalUrl.startsWith('/')) {
+                    imageUrl = `${parentOrigin}${originalUrl}`;
+                } else {
+                    imageUrl = originalUrl;
+                }
+            }
+        }
+
+        const isCrossOrigin = new URL(imageUrl).origin !== window.location.origin;
+        const fetchUrl = isCrossOrigin
+            ? `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`
+            : imageUrl;
+
+        try {
+            const response = await fetch(fetchUrl, {
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = (e) => reject(new Error(`FileReader error: ${e}`));
+                reader.readAsDataURL(blob);
+            });
+        } catch (error) {
+            console.error('Error fetching image:', error);
+            throw error;
+        }
+    };
+
+    const extractBase64Content = (dataUrl: string): string => {
+        return dataUrl.split(',')[1];
     };
 
     const processImages = async () => {
@@ -88,30 +219,43 @@ export const TryOnProvider = ({ children, productImage }: TryOnProviderProps) =>
         goToStep('processing');
 
         try {
-            // Simulate API call with timeout - replace with actual KLING AI API
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            const productImageBase64 = extractBase64Content(await getBase64FromUrl(productImage));
+            const userImageBase64 = extractBase64Content(userImage);
 
-            // For demo purposes - using the product image as the result
-            // In production, use the actual AI-generated image
-            setResultImage(productImage);
+            const response = await fetch('/api/tryon', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    humanImage: userImageBase64,
+                    clothImage: productImageBase64
+                })
+            });
 
-            goToStep('result');
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to start processing');
+            }
+
+            setTaskId(result.taskId);
         } catch (err: any) {
+            console.error('Error processing images:', err);
             setError(`Failed to process images: ${err.message}`);
-            goToStep('upload');
-        } finally {
             setIsProcessing(false);
+            goToStep('upload');
         }
     };
 
     const saveImage = () => {
         if (resultImage) {
-            const link = document.createElement('a');
-            link.href = resultImage;
-            link.download = 'virtual-try-on.png';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const downloadUrl = resultImage.replace(
+                /^data:image\/[^;]+/,
+                'data:application/octet-stream'
+            );
+
+            window.location.href = downloadUrl;
         }
     };
 
@@ -145,7 +289,7 @@ export const TryOnProvider = ({ children, productImage }: TryOnProviderProps) =>
         progressValue,
         error,
         goToStep,
-        handleImageUpload: (file: File) => handleImageUpload(file),
+        handleImageUpload,
         processImages,
         saveImage,
         shareImage,

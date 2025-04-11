@@ -10,6 +10,7 @@ import ProcessingStep from '../../try-on/processing-step';
 import ResultStep from '../../try-on/result-step';
 import {useModalMessaging} from "@/app/hooks/useModalMessaging";
 import ModalFooter from "@/app/components/modal/modal-footer";
+import ErrorBoundary from "@/app/components/common/error-boundary";
 
 export const ACCENT_COLOR = 'rgba(99, 102, 241, 1)';
 
@@ -47,6 +48,26 @@ function ModalInner({
                 return title;
         }
     };
+
+    const modalErrorFallback = (
+        <div className="p-8 flex flex-col items-center justify-center h-[60vh]">
+            <div className="text-center">
+                <div className="mb-6">
+                    <svg className="w-16 h-16 text-red-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <h3 className="text-xl font-medium text-white mb-2">Try-On Process Failed</h3>
+                <p className="text-gray-300 mb-5">We encountered an issue with the virtual try-on process.</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                >
+                    Try Again
+                </button>
+            </div>
+        </div>
+    );
 
     return (<AnimatePresence mode="wait">
         {isModalOpen && (<motion.div
@@ -96,10 +117,12 @@ function ModalInner({
                             animate="center"
                             exit="exit"
                         >
-                            {currentStep === 'preview' && <PreviewStep />}
-                            {currentStep === 'upload' && <UploadStep />}
-                            {currentStep === 'processing' && <ProcessingStep />}
-                            {currentStep === 'result' && <ResultStep />}
+                            <ErrorBoundary fallback={modalErrorFallback}>
+                                {currentStep === 'preview' && <PreviewStep />}
+                                {currentStep === 'upload' && <UploadStep />}
+                                {currentStep === 'processing' && <ProcessingStep />}
+                                {currentStep === 'result' && <ResultStep />}
+                            </ErrorBoundary>
                         </motion.div>
                     </AnimatePresence>
                 </motion.div>
@@ -110,7 +133,11 @@ function ModalInner({
 }
 
 export default function Modal(props: ModalProps) {
-    return (<TryOnProvider productImage={props.productImage}>
-        <ModalInner {...props} />
-    </TryOnProvider>);
+    return (
+        <ErrorBoundary>
+            <TryOnProvider productImage={props.productImage}>
+                <ModalInner {...props} />
+            </TryOnProvider>
+        </ErrorBoundary>
+    );
 }

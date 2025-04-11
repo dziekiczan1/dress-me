@@ -15,7 +15,7 @@ export default function ResultStep() {
                         <motion.img
                             src={resultImage}
                             alt="Virtual try-on result"
-                            className="w-full object-contain max-h-80"
+                            className="w-full object-contain h-80"
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ duration: 0.5 }}
